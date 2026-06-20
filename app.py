@@ -60,13 +60,33 @@ def ask():
 
     question = request.form["question"]
 
+    # Extract keywords from question (uppercase words and important terms)
+    keywords = []
+    for word in question.upper().split():
+        if word.isupper() and len(word) > 2:
+            keywords.append(word)
+    
+    # If no uppercase keywords, use the original question words
+    if not keywords:
+        keywords = [word.upper() for word in question.split() if len(word) > 3]
+
     query_vector = get_query_embedding(question)
 
     chunks = vector_store.search(query_vector)
 
-    # context = "\n".join(chunks)
+    # Filter chunks to only include those containing keywords
+    filtered_chunks = []
+    for chunk in chunks:
+        chunk_upper = chunk.upper()
+        if any(keyword in chunk_upper for keyword in keywords):
+            filtered_chunks.append(chunk)
+
+    # If no chunks match keywords, use original chunks
+    if not filtered_chunks:
+        filtered_chunks = chunks
+
     context = "\n\n".join([
-    chunk.strip() for chunk in chunks
+    chunk.strip() for chunk in filtered_chunks
     if len(chunk.strip()) > 20
 ])
 

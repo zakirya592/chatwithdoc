@@ -1,0 +1,722 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat With Documents</title>
+
+    <style>
+        :root {
+            --bg: #f4f7fb;
+            --panel: #ffffff;
+            --panel-soft: #eef4fb;
+            --text: #172033;
+            --muted: #6b7588;
+            --line: #dce5f0;
+            --primary: #2563eb;
+            --primary-dark: #1d4ed8;
+            --success: #0f9f6e;
+            --danger: #dc2626;
+            --shadow: 0 20px 60px rgba(27, 39, 65, 0.12);
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            background:
+                radial-gradient(circle at top left, rgba(37, 99, 235, 0.14), transparent 34rem),
+                linear-gradient(135deg, #f8fbff 0%, var(--bg) 46%, #edf5f1 100%);
+            color: var(--text);
+            overflow: hidden;
+        }
+
+        button,
+        input {
+            font: inherit;
+        }
+
+        button {
+            border: 0;
+        }
+
+        .shell {
+            width: min(1180px, calc(100% - 32px));
+            height: min(860px, calc(100vh - 32px));
+            min-height: 620px;
+            margin: 16px auto;
+            display: grid;
+            grid-template-columns: 330px minmax(0, 1fr);
+            background: rgba(255, 255, 255, 0.78);
+            border: 1px solid rgba(220, 229, 240, 0.85);
+            border-radius: 24px;
+            box-shadow: var(--shadow);
+            overflow: hidden;
+            backdrop-filter: blur(14px);
+        }
+
+        .sidebar {
+            display: flex;
+            flex-direction: column;
+            gap: 22px;
+            padding: 28px;
+            background: #0f172a;
+            color: #f8fafc;
+        }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+
+        .brand-mark {
+            width: 44px;
+            height: 44px;
+            display: grid;
+            place-items: center;
+            border-radius: 14px;
+            background: linear-gradient(135deg, #60a5fa, #34d399);
+            color: #07111f;
+            font-size: 24px;
+            font-weight: 800;
+        }
+
+        .brand h1 {
+            margin: 0;
+            font-size: 18px;
+            line-height: 1.15;
+            letter-spacing: 0;
+        }
+
+        .brand p {
+            margin: 4px 0 0;
+            color: #a8b3c7;
+            font-size: 13px;
+        }
+
+        .upload-panel {
+            padding: 18px;
+            border: 1px solid rgba(148, 163, 184, 0.24);
+            border-radius: 18px;
+            background: rgba(255, 255, 255, 0.06);
+        }
+
+        .upload-panel h2,
+        .tips h2 {
+            margin: 0 0 12px;
+            font-size: 14px;
+            color: #e5edf8;
+        }
+
+        .file-drop {
+            display: block;
+            padding: 18px;
+            border: 1px dashed rgba(203, 213, 225, 0.45);
+            border-radius: 16px;
+            background: rgba(15, 23, 42, 0.5);
+            cursor: pointer;
+            transition: border-color 0.2s ease, background 0.2s ease;
+        }
+
+        .file-drop:hover {
+            border-color: #93c5fd;
+            background: rgba(30, 41, 59, 0.76);
+        }
+
+        .file-drop input {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            opacity: 0;
+        }
+
+        .file-title {
+            display: block;
+            margin-bottom: 6px;
+            font-weight: 700;
+            color: #f8fafc;
+        }
+
+        .file-name {
+            display: block;
+            min-height: 20px;
+            color: #a8b3c7;
+            font-size: 13px;
+            overflow-wrap: anywhere;
+        }
+
+        .upload-btn,
+        .send-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            min-height: 44px;
+            border-radius: 12px;
+            background: var(--primary);
+            color: #fff;
+            font-weight: 700;
+            cursor: pointer;
+            transition: transform 0.2s ease, background 0.2s ease, opacity 0.2s ease;
+        }
+
+        .upload-btn {
+            width: 100%;
+            margin-top: 12px;
+        }
+
+        .upload-btn:hover,
+        .send-btn:hover {
+            background: var(--primary-dark);
+            transform: translateY(-1px);
+        }
+
+        .upload-btn:disabled,
+        .send-btn:disabled {
+            cursor: not-allowed;
+            opacity: 0.55;
+            transform: none;
+        }
+
+        .status {
+            min-height: 20px;
+            margin: 12px 0 0;
+            color: #cbd5e1;
+            font-size: 13px;
+            line-height: 1.4;
+        }
+
+        .status.success {
+            color: #86efac;
+        }
+
+        .status.error {
+            color: #fca5a5;
+        }
+
+        .tips {
+            margin-top: auto;
+            padding-top: 16px;
+            border-top: 1px solid rgba(148, 163, 184, 0.2);
+        }
+
+        .tip-list {
+            display: grid;
+            gap: 10px;
+            margin: 0;
+            padding: 0;
+            list-style: none;
+            color: #bac6d8;
+            font-size: 13px;
+            line-height: 1.45;
+        }
+
+        .main {
+            min-width: 0;
+            min-height: 0;
+            display: flex;
+            flex-direction: column;
+            background: rgba(255, 255, 255, 0.68);
+        }
+
+        .topbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+            padding: 24px 28px;
+            border-bottom: 1px solid var(--line);
+            background: rgba(255, 255, 255, 0.74);
+        }
+
+        .topbar h2 {
+            margin: 0;
+            font-size: 22px;
+            letter-spacing: 0;
+        }
+
+        .topbar p {
+            margin: 5px 0 0;
+            color: var(--muted);
+            font-size: 14px;
+        }
+
+        .pill {
+            flex: 0 0 auto;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            min-height: 34px;
+            padding: 0 12px;
+            border: 1px solid #bfdbfe;
+            border-radius: 999px;
+            background: #eff6ff;
+            color: #1d4ed8;
+            font-size: 13px;
+            font-weight: 700;
+        }
+
+        .dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 999px;
+            background: var(--success);
+        }
+
+        .chat {
+            flex: 1;
+            overflow-y: auto;
+            padding: 28px;
+
+            /* 🔥 FIX SCROLL BEHAVIOR */
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+
+            scroll-behavior: smooth;
+        }
+
+        .empty-state {
+            height: 100%;
+            min-height: 360px;
+            display: grid;
+            place-items: center;
+            text-align: center;
+            color: var(--muted);
+        }
+
+        .empty-state div {
+            width: min(420px, 100%);
+        }
+
+        .empty-icon {
+            width: 72px;
+            height: 72px;
+            margin: 0 auto 18px;
+            display: grid;
+            place-items: center;
+            border-radius: 22px;
+            background: var(--panel-soft);
+            color: var(--primary);
+            font-size: 32px;
+        }
+
+        .empty-state h3 {
+            margin: 0 0 8px;
+            color: var(--text);
+            font-size: 20px;
+        }
+
+        .empty-state p {
+            margin: 0;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+
+        .msg-row {
+            display: flex;
+            margin: 16px 0;
+        }
+
+        .msg-row.user {
+            justify-content: flex-end;
+        }
+
+        .msg {
+            max-width: min(72%, 680px);
+            padding: 14px 16px;
+            border-radius: 18px;
+            line-height: 1.55;
+            font-size: 15px;
+            white-space: pre-wrap;
+            overflow-wrap: anywhere;
+            box-shadow: 0 10px 28px rgba(15, 23, 42, 0.08);
+        }
+
+        .msg.user {
+            border-bottom-right-radius: 6px;
+            background: var(--primary);
+            color: #fff;
+        }
+
+        .msg.bot {
+            border: 1px solid var(--line);
+            border-bottom-left-radius: 6px;
+            background: var(--panel);
+            color: var(--text);
+        }
+
+        .typing-dots {
+            display: inline-flex;
+            gap: 5px;
+            vertical-align: middle;
+        }
+
+        .typing-dots span {
+            width: 7px;
+            height: 7px;
+            border-radius: 999px;
+            background: #94a3b8;
+            animation: bounce 1s infinite ease-in-out;
+        }
+
+        .typing-dots span:nth-child(2) {
+            animation-delay: 0.15s;
+        }
+
+        .typing-dots span:nth-child(3) {
+            animation-delay: 0.3s;
+        }
+
+        .composer {
+            padding: 18px 28px 24px;
+            border-top: 1px solid var(--line);
+            background: rgba(255, 255, 255, 0.8);
+        }
+
+        .input-wrap {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 8px;
+            border: 1px solid var(--line);
+            border-radius: 18px;
+            background: var(--panel);
+            box-shadow: 0 12px 30px rgba(15, 23, 42, 0.08);
+        }
+
+        #question {
+            width: 100%;
+            min-height: 44px;
+            padding: 0 10px;
+            border: 0;
+            outline: none;
+            color: var(--text);
+            background: transparent;
+        }
+
+        #question::placeholder {
+            color: #94a3b8;
+        }
+
+        .send-btn {
+            flex: 0 0 auto;
+            min-width: 104px;
+            padding: 0 18px;
+        }
+
+        .hint {
+            margin: 10px 8px 0;
+            color: var(--muted);
+            font-size: 12px;
+        }
+
+        @keyframes bounce {
+            0%, 80%, 100% {
+                transform: translateY(0);
+                opacity: 0.45;
+            }
+            40% {
+                transform: translateY(-5px);
+                opacity: 1;
+            }
+        }
+
+        @media (max-width: 860px) {
+            body {
+                background: var(--bg);
+            }
+
+            .shell {
+                width: 100%;
+                height: 100vh;
+                min-height: 100vh;
+                margin: 0;
+                grid-template-columns: 1fr;
+                grid-template-rows: auto minmax(0, 1fr);
+                border: 0;
+                border-radius: 0;
+            }
+
+            .sidebar {
+                padding: 18px;
+                gap: 14px;
+            }
+
+            .tips {
+                display: none;
+            }
+
+            .topbar,
+            .chat,
+            .composer {
+                padding-left: 18px;
+                padding-right: 18px;
+            }
+
+            .topbar {
+                align-items: flex-start;
+                flex-direction: column;
+            }
+
+            .msg {
+                max-width: 88%;
+            }
+        }
+
+        @media (max-width: 540px) {
+            .brand-mark {
+                width: 40px;
+                height: 40px;
+                border-radius: 12px;
+            }
+
+            .topbar h2 {
+                font-size: 19px;
+            }
+
+            .input-wrap {
+                align-items: stretch;
+                flex-direction: column;
+            }
+
+            .send-btn {
+                width: 100%;
+            }
+
+            .msg {
+                max-width: 94%;
+                font-size: 14px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="shell">
+        <aside class="sidebar">
+            <div class="brand">
+                <div class="brand-mark" aria-hidden="true">D</div>
+                <div>
+                    <h1>Chat With Documents</h1>
+                    <p>Ask questions from your uploaded files</p>
+                </div>
+            </div>
+
+            <form id="uploadForm" class="upload-panel">
+                <h2>Document</h2>
+                <label class="file-drop">
+                    <input id="fileInput" type="file" name="file" accept=".pdf,.txt">
+                    <span class="file-title">Choose PDF or text file</span>
+                    <span id="fileName" class="file-name">No file selected</span>
+                </label>
+                <button id="uploadBtn" class="upload-btn" type="submit">Upload document</button>
+                <p id="uploadStatus" class="status">Upload a document before asking questions.</p>
+            </form>
+
+            <section class="tips" aria-label="Question ideas">
+                <h2>Try asking</h2>
+                <ul class="tip-list">
+                    <li>Summarize the document in simple terms.</li>
+                    <li>What are the most important points?</li>
+                    <li>Find details about a specific topic.</li>
+                </ul>
+            </section>
+        </aside>
+
+        <main class="main">
+            <header class="topbar">
+                <div>
+                    <h2>Document assistant</h2>
+                    <p>Upload, index, and chat with your knowledge base.</p>
+                </div>
+                <div class="pill"><span class="dot"></span> RAG ready</div>
+            </header>
+
+            <div class="chat" id="chat">
+                <div id="emptyState" class="empty-state">
+                    <div>
+                        <div class="empty-icon" aria-hidden="true">?</div>
+                        <h3>Your answers will appear here</h3>
+                        <p>Select a document, upload it, then ask a question. The assistant will use the indexed document content to answer.</p>
+                    </div>
+                </div>
+            </div>
+
+            <form id="questionForm" class="composer">
+                <div class="input-wrap">
+                    <input id="question" name="question" autocomplete="off" placeholder="Ask about your document...">
+                    <button id="sendBtn" class="send-btn" type="submit">Send</button>
+                </div>
+                <p class="hint">Press Enter to send your question.</p>
+            </form>
+        </main>
+    </div>
+
+    <script>
+        const chat = document.getElementById("chat");
+        const emptyState = document.getElementById("emptyState");
+        const questionForm = document.getElementById("questionForm");
+        const questionInput = document.getElementById("question");
+        const sendBtn = document.getElementById("sendBtn");
+        const uploadForm = document.getElementById("uploadForm");
+        const uploadBtn = document.getElementById("uploadBtn");
+        const uploadStatus = document.getElementById("uploadStatus");
+        const fileInput = document.getElementById("fileInput");
+        const fileName = document.getElementById("fileName");
+
+        function hideEmptyState() {
+            if (emptyState) {
+                emptyState.remove();
+            }
+        }
+
+        function addMsg(text, type) {
+            hideEmptyState();
+
+            const row = document.createElement("div");
+            row.className = "msg-row " + type;
+
+            const div = document.createElement("div");
+            div.className = "msg " + type;
+            div.innerText = text;
+
+            row.appendChild(div);
+            chat.appendChild(row);
+            chat.scrollTop = chat.scrollHeight;
+
+            return div;
+        }
+
+        function showTyping() {
+            hideEmptyState();
+
+            const row = document.createElement("div");
+            row.className = "msg-row bot";
+            row.id = "typing";
+
+            const div = document.createElement("div");
+            div.className = "msg bot";
+            div.innerHTML = '<span class="typing-dots"><span></span><span></span><span></span></span>';
+
+            row.appendChild(div);
+            chat.appendChild(row);
+            chat.scrollTop = chat.scrollHeight;
+        }
+
+        function removeTyping() {
+            const typing = document.getElementById("typing");
+            if (typing) {
+                typing.remove();
+            }
+        }
+
+        function setUploadStatus(message, type) {
+            uploadStatus.textContent = message;
+            uploadStatus.className = "status" + (type ? " " + type : "");
+        }
+
+        fileInput.addEventListener("change", () => {
+            fileName.textContent = fileInput.files.length ? fileInput.files[0].name : "No file selected";
+            setUploadStatus("Ready to upload and index this document.");
+        });
+
+        uploadForm.addEventListener("submit", async (event) => {
+            event.preventDefault();
+
+            if (!fileInput.files.length) {
+                setUploadStatus("Please choose a PDF or text file first.", "error");
+                return;
+            }
+
+            uploadBtn.disabled = true;
+            uploadBtn.textContent = "Indexing...";
+            setUploadStatus("Uploading and building the document index...");
+
+            try {
+                const formData = new FormData(uploadForm);
+                const res = await fetch("/upload", {
+                    method: "POST",
+                    body: formData
+                });
+
+                const message = await res.text();
+
+                if (!res.ok) {
+                    throw new Error(message || "Upload failed.");
+                }
+
+                setUploadStatus(message, "success");
+            } catch (error) {
+                setUploadStatus(error.message || "Something went wrong while uploading.", "error");
+            } finally {
+                uploadBtn.disabled = false;
+                uploadBtn.textContent = "Upload document";
+            }
+        });
+
+        questionForm.addEventListener("submit", async (event) => {
+            event.preventDefault();
+
+            const question = questionInput.value.trim();
+            if (!question) {
+                questionInput.focus();
+                return;
+            }
+
+            addMsg(question, "user");
+            questionInput.value = "";
+            sendBtn.disabled = true;
+            sendBtn.textContent = "Sending";
+            showTyping();
+
+            try {
+                const form = new FormData();
+                form.append("question", question);
+
+                const res = await fetch("/ask", {
+                    method: "POST",
+                    body: form
+                });
+
+                const answer = await res.text();
+
+                if (!res.ok) {
+                    throw new Error(answer || "Could not get an answer.");
+                }
+
+                removeTyping();
+                typeText(answer);
+            } catch (error) {
+                removeTyping();
+                addMsg(error.message || "Something went wrong while asking.", "bot");
+            } finally {
+                sendBtn.disabled = false;
+                sendBtn.textContent = "Send";
+                questionInput.focus();
+            }
+        });
+
+        function typeText(text) {
+            const div = addMsg("", "bot");
+            let i = 0;
+
+            function type() {
+                if (i < text.length) {
+                    div.textContent += text[i];
+                    i++;
+                    chat.scrollTop = chat.scrollHeight;
+                    setTimeout(type, 8);
+                }
+            }
+
+            type();
+        }
+    </script>
+</body>
+</html>
